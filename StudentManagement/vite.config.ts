@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '0.0.0.0', // السماح بالاتصالات من جميع عناوين IP
-    port: 8580,
+    port: 8589,
     strictPort: true,
   },
   optimizeDeps: {

@@ -13,8 +13,12 @@ interface Student {
   studentId: string;
   level: string;
   section: string;
-  guardianPhone: string;
-  parentPhone?: string;
+  guardian_phone: string;
+  parent_phone?: string;
+  gender?: 'ذكر' | 'أنثى';  // ✅ أضف هذا السطر
+  phone?: string;            // ✅ أضف هذا أيضاً للـ debug
+  father_phone?: string;     // ✅ وهذا
+  mother_phone?: string;     // ✅ وهذا
 }
 
 interface AbsenceRecord {
@@ -67,6 +71,8 @@ export const AbsenceManagement: React.FC = () => {
   const [scheduleAvailable, setScheduleAvailable] = useState(false);
   const [currentSchedule, setCurrentSchedule] = useState<TimetableEntry | null>(null);
   const [dateOnlyMode, setDateOnlyMode] = useState(false);
+  
+   
 
   useEffect(() => {
     loadInitialData();
@@ -344,71 +350,138 @@ export const AbsenceManagement: React.FC = () => {
     }
   };
 
-  const sendWhatsAppNotification = async (student: Student, absence: AbsenceRecord) => {
-    const phone = student.parentPhone || student.guardianPhone;
-    if (!phone) {
-      throw new Error('رقم ولي الأمر غير متوفر');
-    }
+ const sendWhatsAppNotification = async (
+  student: Student,
+  absence: AbsenceRecord,
+  dateOnlyMode: boolean = false
+) => {
+  const phone = student.guardian_phone;
 
+  if (!phone || phone.trim() === '') {
+    throw new Error('رقم ولي الأمر غير متوفر. يرجى تحديث الرقم من صفحة تدبير أرقام الاتصال');
+  }
+
+  // تحديد النص حسب نوع الحالة
+  let statusText = '';
+  if (absence.status === 'غائب') {
+    statusText = 'تغيب';
+  } else if (absence.status === 'متأخر') {
+    statusText = 'تأخر';
+  } else if (absence.status === 'مخالفة') {
+    statusText = 'ارتكب مخالفة';
+  } else {
+    statusText = absence.status;
+  }
+
+  // تحديد النوع (ابنكم أو ابنتكم)
+  const genderText = (student as any).gender === 'أنثى' ? 'ابنتكم' : 'ابنكم';
+  const fullName = `${student.firstName} ${student.lastName}`;
+
+  let message = '';
+
+  if (dateOnlyMode) {
+    // ✅ رسالة مبسطة: التاريخ فقط
+    message = `نخبركم أن ${genderText} ${fullName} ` +
+      `${statusText} يوم ${absence.date}.\n\n` +
+      `إدارة المؤسسة`;
+  } else {
+    // ✅ رسالة كاملة: مع الحصة والوقت والمادة
     const teacherText = currentSchedule?.teacher_name_arabic || '';
-
-    const message = `#نخبركم أن ابنكم ${student.firstName} ${student.lastName} ` +
-      `${absence.status === 'غائب' ? 'تغيب' : absence.status === 'متأخر' ? 'تأخر' : 'ارتكب مخالفة'} ` +
+    
+    message = `#نخبركم أن ${genderText} ${fullName} ` +
+      `${statusText} ` +
       `يوم ${absence.date} الحصة: ${absence.period} ` +
       `من الساعة ${absence.time_from} إلى الساعة ${absence.time_to} ` +
-      `مادة: ${absence.subject}${teacherText ? ` - الأستاذ: ${teacherText}` : ''} القاعة: ${absence.room} عن الإدارة.`;
+      `مادة: ${absence.subject}${teacherText ? ` - الأستاذ: ${teacherText}` : ''} ` +
+      `القاعة: ${absence.room}\n\n` +
+      `عن الإدارة.`;
+  }
 
-    const result = await unifiedWhatsAppService.sendMessage(phone, message);
+  console.log('[DEBUG] Sending notification to:', fullName);
+  console.log('[DEBUG] Phone:', phone);
+  console.log('[DEBUG] Message:', message);
+  console.log('[DEBUG] Date-only mode:', dateOnlyMode);
 
-    if (!result.success) {
-      throw new Error(result.message);
-    }
+  // ✅ استخدم sendMessage بدل sendWhatsApp
+  const result = await unifiedWhatsAppService.sendMessage(phone, message);
+  
+  if (!result.success) {
+    throw new Error(result.message || 'فشل إرسال الرسالة');
+  }
+  
+  console.log(`✅ [SUCCESS] تم إرسال الإشعار لـ ${fullName}`);
+};
 
-    return { sent: true, message };
-  };
 
-  const handleSendNotifications = async () => {
-    setLoading(true);
 
+     const handleSendNotifications = async () => {
+  // ✅ استخدام absenceStatuses بدل selectedStudents
+  const studentsToNotify = Array.from(absenceStatuses.entries()).filter(
+    ([_, record]) => record.status !== 'حاضر'
+  );
+
+  if (studentsToNotify.length === 0) {
+    alert('⚠️ يرجى تحديد تلاميذ غائبون أو متأخرون أو مخالفون لإرسال الإشعارات');
+    return;
+  }
+
+  if (!window.confirm(`هل أنت متأكد من إرسال ${studentsToNotify.length} إشعار؟`)) {
+    return;
+  }
+
+  let successCount = 0;
+  let errorCount = 0;
+  const errors: string[] = [];
+
+  for (const [studentId, absence] of studentsToNotify) {
     try {
-      const absentRecords = Array.from(absenceStatuses.entries());
-
-      if (absentRecords.length === 0) {
-        setModalMessage({ type: 'error', text: 'لا توجد غيابات للإرسال' });
-        setShowModal(true);
-        setLoading(false);
-        return;
+      // ✅ البحث عن التلميذ من students
+      const student = students.find(s => s.id === studentId);
+      
+      if (!student) {
+        errorCount++;
+        errors.push(`لم يتم العثور على التلميذ ${studentId}`);
+        continue;
       }
 
-      let successCount = 0;
-      let failCount = 0;
-
-      for (const [studentId, absence] of absentRecords) {
-        const student = students.find(s => s.id === studentId);
-        if (!student) continue;
-
-        try {
-          await sendWhatsAppNotification(student, absence);
-          successCount++;
-        } catch (error) {
-          console.error(`فشل إرسال إشعار لـ ${student.firstName}:`, error);
-          failCount++;
-        }
-      }
-
-      setModalMessage({
-        type: successCount > 0 ? 'success' : 'error',
-        text: `تم إعداد ${successCount} إشعار للإرسال${failCount > 0 ? `\nفشل: ${failCount}` : ''}\n\nملاحظة: يجب إعداد WhatsApp API لإرسال الإشعارات فعلياً`
-      });
-      setShowModal(true);
+      // ✅ إرسال الإشعار مع تمرير dateOnlyMode
+      await sendWhatsAppNotification(student, absence, dateOnlyMode);
+      successCount++;
+      
+      console.log(`✅ تم إرسال الإشعار لـ ${student.firstName} ${student.lastName}`);
+      
     } catch (error) {
-      console.error('خطأ في الإرسال:', error);
-      setModalMessage({ type: 'error', text: '❌ فشل إعداد الإشعارات' });
-      setShowModal(true);
-    } finally {
-      setLoading(false);
+      errorCount++;
+      const student = students.find(s => s.id === studentId);
+      const errorMessage = error instanceof Error ? error.message : 'خطأ غير معروف';
+      errors.push(`${student?.firstName || studentId}: ${errorMessage}`);
+      console.error(`❌ فشل إرسال إشعار لـ ${studentId}:`, error);
     }
-  };
+  }
+
+  // ✅ عرض النتيجة
+  if (errorCount === 0) {
+    setModalMessage({
+      type: 'success',
+      text: `✅ تم إرسال جميع الإشعارات بنجاح!\n\nالعدد: ${successCount} إشعار`
+    });
+    setShowModal(true);
+  } else if (successCount === 0) {
+    setModalMessage({
+      type: 'error',
+      text: `❌ فشل إرسال جميع الإشعارات!\n\n${errors.join('\n')}`
+    });
+    setShowModal(true);
+  } else {
+    setModalMessage({
+      type: 'success',
+      text: `⚠️ نتيجة مختلطة:\n✅ نجح: ${successCount}\n❌ فشل: ${errorCount}\n\nالأخطاء:\n${errors.join('\n')}`
+    });
+    setShowModal(true);
+  }
+};
+
+
 
   const handlePrintPermitTicket = async (student: Student) => {
     console.log('📄 إنشاء ورقة السماح بالدخول للتلميذ:', student.firstName, student.lastName);

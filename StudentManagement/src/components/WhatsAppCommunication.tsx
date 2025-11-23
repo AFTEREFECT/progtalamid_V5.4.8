@@ -109,7 +109,7 @@ export const WhatsAppCommunication: React.FC = () => {
   };
 
   const addRecipient = (student: Student) => {
-    const phone = recipientType === 'student' ? student.phone : student.guardianPhone;
+    const phone = recipientType === 'student' ? student.phone : student.guardian_phone;
 
     if (!phone) {
       alert(`⚠️ لا يوجد رقم هاتف ${recipientType === 'student' ? 'للتلميذ' : 'لولي الأمر'}`);
@@ -157,14 +157,14 @@ export const WhatsAppCommunication: React.FC = () => {
 
     return filteredStudents
       .filter(s => {
-        const phone = recipientType === 'student' ? s.phone : s.guardianPhone;
+        const phone = recipientType === 'student' ? s.phone : s.guardian_phone;
         return phone && phone.trim() !== '';
       })
       .map(s => ({
         id: s.id,
         name: `${s.firstName} ${s.lastName}`,
         nationalId: s.nationalId || '',
-        phone: recipientType === 'student' ? s.phone! : s.guardianPhone!,
+        phone: recipientType === 'student' ? s.phone! : s.guardian_phone!,
         section: s.section,
         level: s.level
       }));
@@ -479,7 +479,7 @@ const handleSend = async () => {
                   {searchResults.length > 0 && (
                     <div className="mt-2 border border-gray-300 rounded-lg max-h-64 overflow-y-auto">
                       {searchResults.map(student => {
-                        const phone = recipientType === 'student' ? student.phone : student.guardianPhone;
+                        const phone = recipientType === 'student' ? student.phone : student.guardian_phone;
                         return (
                           <div
                             key={student.id}

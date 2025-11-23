@@ -26,6 +26,8 @@ interface WhatsAppConfig {
   access_token: string;
 }
 
+ 
+
 export const UnifiedWhatsAppSettings: React.FC = () => {
   const [config, setConfig] = useState<WhatsAppConfig>({
     service_type: 'waaku',
@@ -458,18 +460,12 @@ export const UnifiedWhatsAppSettings: React.FC = () => {
                   onChange={(e) => setConfig({ ...config, service_type: e.target.value as ServiceType })}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                 >
-                  <option value="waaku">Waaku (الموصى به بشدة) ⭐</option>
-                  <option value="waha">WAHA</option>
-                  <option value="evolution">Evolution API</option>
-                  <option value="green_api">Green API</option>
-                  <option value="callmebot">CallMeBot / WhapiPlus</option>
+                  <option value="waaku">نظام التواصل عبر الواتساب  ⭐</option>
+                 
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   {config.service_type === 'waaku' && 'Waaku: خادم مخصص وآمن بالكامل - الأفضل للمؤسسات 🏆'}
-                  {config.service_type === 'waha' && 'WAHA: حل مفتوح المصدر وسهل الإعداد'}
-                  {config.service_type === 'evolution' && 'Evolution API: حل قوي ومتقدم'}
-                  {config.service_type === 'green_api' && 'Green API: خدمة سحابية مدفوعة'}
-                  {config.service_type === 'callmebot' && 'CallMeBot: خدمة بسيطة ومجانية'}
+            
                 </p>
               </div>
 
@@ -542,4 +538,6 @@ export const UnifiedWhatsAppSettings: React.FC = () => {
       </div>
     </div>
   );
+
+
 };

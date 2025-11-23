@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+
+import TuteurImport from './components/TuteurImport';
+import GuardianPhoneManagement from './components/GuardianPhoneManagement';
+
 import { dbManager } from './utils/database';
 import { licenseManager } from './utils/licenseManager';
 import { trialManager } from './utils/trialManager';
@@ -49,6 +53,8 @@ import { SubscriptionManagement } from './components/SubscriptionManagement';
 import { SubscriptionAdmin } from './components/SubscriptionAdmin';
 import { TrialAnalytics } from './components/TrialAnalytics';
 import {ahwDashboard } from './components/WAHADashboard';
+//import TuteurImport from './components/TuteurImport';
+
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -252,12 +258,17 @@ function App() {
         return <Dashboard />;
       case 'students':
         return <StudentManagement />;
+      case 'guardian-phones':
+       return <GuardianPhoneManagement />;
+
       case 'enrollment':
         return <SchoolEnrollmentImport />;
       case 'levels-setup':
         return <LevelsAndSectionsSetup />;
       case 'comprehensive-import':
         return <ComprehensiveImport />;
+        case "tuteur-import": 
+        return <TuteurImport/>;
       case 'credentials-import':
         return <CredentialsImport />;
       case 'credentials':
@@ -306,8 +317,8 @@ function App() {
         return <AboutProgram />;
       case 'attendance-sheet':
         return <AttendanceSheetGenerator />;
-      case 'waha-dashboard':
-        return <WAHADashboard />;
+     // case 'waha-dashboard':
+      //  return <WAHADashboard />;
       case 'whatsapp-settings':
         return <UnifiedWhatsAppSettings />;
       case 'whatsapp-communication':

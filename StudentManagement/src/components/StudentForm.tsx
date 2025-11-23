@@ -10,40 +10,57 @@ interface StudentFormProps {
 }
 
 const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) => {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    nationalId: '',
-    gender: 'ذكر' as 'ذكر' | 'أنثى',
-    birthPlace: '',
-    dateOfBirth: '',
-    email: '',
-    phone: '',
-    studentId: '',
-    grade: '',
-    section: '',
-    level: '',
-    enrollmentDate: '',
-    address: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    guardianName: '',
-    guardianPhone: '',
-    guardianRelation: '',
-    socialSupport: false,
-    transportService: false,
-    medicalInfo: '',
-    notes: '',
-    status: 'متمدرس' as 'منقطع' | 'مدمج ' | 'غ ملتحق' | 'مغادر' | 'وافد',
-    // الحقول الجديدة للإحصائيات المتقدمة
-    ageGroup: '',
-    schoolType: '',
-    academicYear: '2025/2026',
-    region: '',
-    province: '',
-    municipality: '',
-    institution: ''
-  });
+ const [formData, setFormData] = useState({
+  firstName: '',
+  lastName: '',
+  nationalId: '',
+  gender: 'ذكر' as 'ذكر' | 'أنثى',
+  birthPlace: '',
+  dateOfBirth: '',
+  email: '',
+  phone: '',
+  studentId: '',
+  grade: '',
+  section: '',
+  level: '',
+  enrollmentDate: '',
+  address: '',
+  emergencyContact: '',
+  emergencyPhone: '',
+  
+  // --- الحقول القديمة والجديدة لولي الأمر ---
+  guardianName: '',
+  guardianPhone: '',
+  guardianRelation: '',
+  guardianship_type: '',
+  father_cin: '',
+  father_first_name_ar: '',
+  father_last_name_ar: '',
+  father_job: '',
+  father_phone: '',
+  father_address: '',
+  mother_cin: '',
+  mother_first_name_ar: '',
+  mother_last_name_ar: '',
+  mother_job: '',
+  mother_phone: '',
+  mother_address: '',
+  // ------------------------------------
+
+  socialSupport: false,
+  transportService: false,
+  medicalInfo: '',
+  notes: '',
+  status: 'متمدرس' as any, // استخدام any لتجنب أخطاء النوع المؤقتة
+  ageGroup: '',
+  schoolType: '',
+  academicYear: '2025/2026',
+  region: '',
+  province: '',
+  municipality: '',
+  institution: ''
+});
+
 
   const [levels, setLevels] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
@@ -66,43 +83,63 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
     }
   };
 
-  useEffect(() => {
-    if (student) {
-      setFormData({
-        firstName: student.firstName,
-        lastName: student.lastName,
-        nationalId: student.nationalId,
-        gender: student.gender,
-        birthPlace: student.birthPlace,
-        dateOfBirth: student.dateOfBirth,
-        email: student.email,
-        phone: student.phone,
-        studentId: student.studentId,
-        grade: student.grade,
-        section: student.section,
-        level: student.level,
-        enrollmentDate: student.enrollmentDate,
-        address: student.address,
-        emergencyContact: student.emergencyContact,
-        emergencyPhone: student.emergencyPhone,
-        guardianName: student.guardianName,
-        guardianPhone: student.guardianPhone,
-        guardianRelation: student.guardianRelation,
-        socialSupport: student.socialSupport,
-        transportService: student.transportService,
-        medicalInfo: student.medicalInfo,
-        notes: student.notes,
-        status: student.status,
-        ageGroup: student.ageGroup || '',
-        schoolType: student.schoolType || '',
-        academicYear: student.academicYear || '2025/2026', 
-        region: student.region || '',
-        province: student.province || '',
-        municipality: student.municipality || '',
-        institution: student.institution || ''
-      });
-    }
-  }, [student]);
+useEffect(() => {
+  if (student) {
+    setFormData({
+      // --- البيانات الحالية (تبقى كما هي) ---
+      firstName: student.firstName || '',
+      lastName: student.lastName || '',
+      nationalId: student.nationalId || '',
+      gender: student.gender || 'ذكر',
+      birthPlace: student.birthPlace || '',
+      dateOfBirth: student.dateOfBirth || '',
+      email: student.email || '',
+      phone: student.phone || '',
+      studentId: student.studentId || '',
+      grade: student.grade || '',
+      section: student.section || '',
+      level: student.level || '',
+      enrollmentDate: student.enrollmentDate || '',
+      address: student.address || '',
+      emergencyContact: student.emergencyContact || '',
+      emergencyPhone: student.emergencyPhone || '',
+      
+      // --- هذا هو الجزء الأهم: إضافة بيانات ولي الأمر المحدثة ---
+      guardianName: student.guardianName || `${student.father_first_name_ar || ''} ${student.father_last_name_ar || ''}`,
+      guardianPhone: student.guardianPhone || student.father_phone || '',
+      guardianRelation: student.guardianRelation || student.guardianship_type || 'أب',
+      
+      guardianship_type: student.guardianship_type || '',
+      father_cin: student.father_cin || '',
+      father_first_name_ar: student.father_first_name_ar || '',
+      father_last_name_ar: student.father_last_name_ar || '',
+      father_job: student.father_job || '',
+      father_phone: student.father_phone || '',
+      father_address: student.father_address || '',
+      mother_cin: student.mother_cin || '',
+      mother_first_name_ar: student.mother_first_name_ar || '',
+      mother_last_name_ar: student.mother_last_name_ar || '',
+      mother_job: student.mother_job || '',
+      mother_phone: student.mother_phone || '',
+      mother_address: student.mother_address || '',
+      // ----------------------------------------------------
+
+      socialSupport: !!student.socialSupport,
+      transportService: !!student.transportService,
+      medicalInfo: student.medicalInfo || '',
+      notes: student.notes || '',
+      status: student.status || 'متمدرس',
+      ageGroup: student.ageGroup || '',
+      schoolType: student.schoolType || '',
+      academicYear: student.academicYear || '2025/2026', 
+      region: student.region || '',
+      province: student.province || '',
+      municipality: student.municipality || '',
+      institution: student.institution || ''
+    });
+  }
+}, [student]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -569,81 +606,174 @@ const StudentForm: React.FC<StudentFormProps> = ({ student, onSave, onCancel }) 
           </div>
 
           {/* بيانات ولي الأمر */}
-          <div className="bg-teal-50 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-teal-900 mb-4">بيانات ولي الأمر</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* اسم ولي الأمر */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  اسم ولي الأمر
-                </label>
-                <input
-                  type="text"
-                  name="guardianName"
-                  value={formData.guardianName}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+        {/* ==================================================================== */}
+{/* --- الكود الجديد والمحسن لأقسام الأب والأم والطوارئ --- */}
+{/* ==================================================================== */}
 
-              {/* هاتف ولي الأمر */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  هاتف ولي الأمر
-                </label>
-                <input
-                  type="tel"
-                  name="guardianPhone"
-                  value={formData.guardianPhone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+{/* --- قسم بيانات الأب --- */}
+<div className="bg-sky-50 p-4 rounded-lg">
+  <h3 className="text-lg font-semibold text-sky-900 mb-4">بيانات الأب</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    
+    {/* الاسم الكامل للأب (للعرض فقط) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل للأب</label>
+      <input
+        type="text"
+        value={`${formData.father_first_name_ar || ''} ${formData.father_last_name_ar || ''}`}
+        readOnly
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+        placeholder="يتم تجميعه تلقائياً"
+      />
+    </div>
 
-              {/* صلة القرابة */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  صلة القرابة
-                </label>
-                <input
-                  type="text"
-                  name="guardianRelation"
-                  value={formData.guardianRelation}
-                  onChange={handleChange}
-                  placeholder="مثال: الأب، الأم، الأخ"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+    {/* رقم بطاقة الأب */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">ر.ب.و للأب</label>
+      <input
+        type="text"
+        name="father_cin"
+        value={formData.father_cin}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
 
-              {/* جهة اتصال الطوارئ */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  جهة اتصال الطوارئ
-                </label>
-                <input
-                  type="text"
-                  name="emergencyContact"
-                  value={formData.emergencyContact}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+    {/* هاتف الأب */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">هاتف الأب</label>
+      <input
+        type="tel"
+        name="father_phone"
+        value={formData.father_phone}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
 
-              {/* هاتف الطوارئ */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  هاتف الطوارئ
-                </label>
-                <input
-                  type="tel"
-                  name="emergencyPhone"
-                  value={formData.emergencyPhone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
+    {/* مهنة الأب */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">مهنة الأب</label>
+      <input
+        type="text"
+        name="father_job"
+        value={formData.father_job}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    {/* عنوان الأب */}
+    <div className="md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الأب</label>
+      <input
+        type="text"
+        name="father_address"
+        value={formData.father_address}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  </div>
+</div>
+
+{/* --- قسم بيانات الأم --- */}
+<div className="bg-pink-50 p-4 rounded-lg">
+  <h3 className="text-lg font-semibold text-pink-900 mb-4">بيانات الأم</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+    {/* الاسم الكامل للأم (للعرض فقط) */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل للأم</label>
+      <input
+        type="text"
+        value={`${formData.mother_first_name_ar || ''} ${formData.mother_last_name_ar || ''}`}
+        readOnly
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100"
+        placeholder="يتم تجميعه تلقائياً"
+      />
+    </div>
+
+    {/* رقم بطاقة الأم */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">ر.ب.و للأم</label>
+      <input
+        type="text"
+        name="mother_cin"
+        value={formData.mother_cin}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    {/* هاتف الأم */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">هاتف الأم</label>
+      <input
+        type="tel"
+        name="mother_phone"
+        value={formData.mother_phone}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    {/* مهنة الأم */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">مهنة الأم</label>
+      <input
+        type="text"
+        name="mother_job"
+        value={formData.mother_job}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    {/* عنوان الأم */}
+    <div className="md:col-span-2">
+      <label className="block text-sm font-medium text-gray-700 mb-2">عنوان الأم</label>
+      <input
+        type="text"
+        name="mother_address"
+        value={formData.mother_address}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  </div>
+</div>
+
+{/* --- قسم بيانات الطوارئ (تم فصله ليكون أوضح) --- */}
+<div className="bg-yellow-50 p-4 rounded-lg">
+  <h3 className="text-lg font-semibold text-yellow-900 mb-4">بيانات الطوارئ</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* جهة اتصال الطوارئ */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">جهة اتصال الطوارئ</label>
+      <input
+        type="text"
+        name="emergencyContact"
+        value={formData.emergencyContact}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    {/* هاتف الطوارئ */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">هاتف الطوارئ</label>
+      <input
+        type="tel"
+        name="emergencyPhone"
+        value={formData.emergencyPhone}
+        onChange={handleChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  </div>
+</div>
+
 
           {/* الخدمات والمعلومات الإضافية */}
           <div className="bg-gray-50 p-4 rounded-lg">

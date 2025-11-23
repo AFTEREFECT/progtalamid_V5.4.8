@@ -10,6 +10,9 @@ import ProgressBar from './ProgressBar';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+// أضف هذا السطر في أعلى الملف مع باقي الـ imports
+import { Pencil } from 'lucide-react';
+
 
 const StudentManagement: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
@@ -44,7 +47,117 @@ const StudentManagement: React.FC = () => {
     level: 'الكل',
     section: 'الكل'
   });
+
+  
+const [isFormOpen, setIsFormOpen] = useState(false);
+ 
   const [studentsPerPage, setStudentsPerPage] = useState<number>(38);
+ // متغير لتتبع الخلية التي يتم تحريرها حالياً
+const [editingCell, setEditingCell] = useState<{studentId: string, field: string} | null>(null);
+
+// متغير لتتبع الصف المحدد حالياً
+const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+
+
+const handleView = (student: Student) => {
+  // لعرض تفاصيل التلميذ
+  setSelectedStudent(student);
+  setShowDetail(true);
+};
+
+const handleEdit = (student: Student) => {
+  // لتعديل بيانات التلميذ
+  setSelectedStudent(student);
+  setShowForm(true);
+};
+
+const handleDeleteConfirmation = (studentId: string) => {
+  // تأكيد الحذف قبل التنفيذ
+  if (window.confirm('هل أنت متأكد أنك تريد حذف هذا التلميذ؟ لا يمكن التراجع عن هذا الإجراء.')) {
+    handleDelete(studentId);
+  }
+};
+
+ 
+// =======================================================
+// --- دالة الحفظ السريع للتعديل المباشر ---
+// =======================================================
+ // ==========================================================
+// --- دالة الحفظ السريع مع الانتقال التلقائي للأسفل ---
+// ==========================================================
+const handleQuickUpdate = async (studentId: string, field: string, value: string, moveToNext: boolean = false) => {
+  try {
+    await dbManager.updateStudent(studentId, { [field]: value });
+    
+    // تحديث القائمة المحلية
+    setStudents(prevStudents => 
+      prevStudents.map(s => 
+        s.id === studentId ? { ...s, [field]: value } : s
+      )
+    );
+    setFilteredStudents(prevFiltered => 
+      prevFiltered.map(s => 
+        s.id === studentId ? { ...s, [field]: value } : s
+      )
+    );
+    
+    // الانتقال للخلية التالية في نفس العمود
+    if (moveToNext) {
+      const currentIndex = filteredStudents.findIndex(s => s.id === studentId);
+      if (currentIndex < filteredStudents.length - 1) {
+        const nextStudent = filteredStudents[currentIndex + 1];
+        setEditingCell({ studentId: nextStudent.id, field });
+        setSelectedRowId(nextStudent.id);
+      } else {
+        // إذا وصلنا لآخر صف، أغلق التعديل
+        setEditingCell(null);
+      }
+    } else {
+      setEditingCell(null);
+    }
+  } catch (error) {
+    console.error("Failed to quick update:", error);
+  }
+};
+
+
+
+
+  const handleDelete = async (studentId: string) => {
+    // يقوم بالحذف الفعلي
+    try {
+      await dbManager.deleteStudent(studentId);
+      loadStudents(); // إعادة تحميل قائمة التلاميذ لتحديث الواجهة
+      // يمكنك إضافة رسالة نجاح هنا إذا أردت
+    } catch (error) {
+      console.error("Failed to delete student:", error);
+      // يمكنك إضافة رسالة خطأ هنا إذا أردت
+    }
+  };
+
+// ==============================================
+// --- دالة الحفظ التي كانت مفقودة ---
+// ==============================================
+const handleSave = async (studentData: Omit<Student, 'id' | 'createdAt' | 'updatedAt'>) => {
+  try {
+    if (selectedStudent) {
+      // في حالة التحديث
+      await dbManager.updateStudent(selectedStudent.id, studentData);
+    } else {
+      // في حالة الإضافة
+      await dbManager.addStudent(studentData);
+    }
+    
+    // إعادة تحميل البيانات لتحديث الواجهة
+    loadInitialData();
+    
+    // إغلاق النموذج
+    setIsFormOpen(false);
+    
+  } catch (error) {
+    console.error("Failed to save student:", error);
+  }
+};
 
  const currentDate = new Date().toLocaleDateString('fr-MA');
 // الحصول على اللوغو من مدير اللوغو
@@ -111,6 +224,33 @@ const StudentManagement: React.FC = () => {
 
     setFilteredStudents(filtered);
   };
+// تغيير هاتف ولي الامر  التلاميذ
+async function batchUpdateGuardianPhones() {
+  const allStudents = await dbManager.getStudents();
+
+  for (const student of allStudents) {
+    const hasFatherPhone = Boolean(student.father_phone && student.father_phone.trim() !== '');
+    const hasMotherPhone = Boolean(student.mother_phone && student.mother_phone.trim() !== '');
+
+    let guardian_phone = '';
+    let guardian_pref = '';
+
+    if (hasFatherPhone) {
+      guardian_phone = student.father_phone;
+      guardian_pref = 'father';
+    } else if (hasMotherPhone) {
+      guardian_phone = student.mother_phone;
+      guardian_pref = 'mother';
+    }
+
+    await dbManager.updateStudent(student.id, {
+      guardian_phone,
+      guardian_pref
+    });
+  }
+}
+
+
 
   // إضافة تلميذ جديد
   const handleAddStudent = async (studentData: Omit<Student, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -1942,122 +2082,223 @@ ${pages.map((pageStudents, pageIndex) => generatePage(pageStudents, pageIndex + 
         )}
       </div>
 
+<button
+  className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+  onClick={async () => {
+    if (!window.confirm('هل تريد تحديث أرقام ولي الأمر لجميع التلاميذ دفعة واحدة؟')) return;
+    try {
+      await batchUpdateGuardianPhones();
+      alert('تم تحديث أرقام ولي الأمر لجميع التلاميذ.');
+      await loadStudents();
+    } catch (error) {
+      console.error('خطأ في التحديث الدفعي:', error);
+      alert('فشل التحديث، حاول مرة أخرى.');
+    }
+  }}
+>
+  تحديث دفعة واحدة لأرقام أولياء الأمور
+</button>
+
+
+
       {/* جدول التلاميذ */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  التلميذ
-                </th>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  الرمز
-                </th>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  النوع
-                </th>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  المستوى
-                </th>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  القسم
-                </th>
-              
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  الحالة
-                </th>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  تاريخ التسجيل
-                </th>
-                <th className="px-6 py-1 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  الإجراءات
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStudents.map((student) => (
-                <tr
-                  key={student.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onDoubleClick={() => {
-                    setSelectedStudent(student);
-                    setShowDetail(true);
-                  }}
-                  title="انقر مرتين لعرض التفاصيل"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {student.firstName} {student.lastName}
-                      </div>
-                      <div className="text-sm text-gray-500">{student.email}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {student.nationalId}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      student.gender === 'ذكر' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
-                    }`}>
-                      {student.gender}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                      {student.level || 'غير محدد'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                      {student.section || 'غير محدد'}
-                    </span>
-                  </td>
-                
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      student.status === 'متمدرس' ? 'bg-green-100 text-green-800' :
-                    
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {student.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(student.enrollmentDate).toLocaleDateString('en-CA')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setShowDetail(true);
-                        }}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setShowForm(true);
-                        }}
-                        className="text-indigo-600 hover:text-indigo-900 p-1 rounded"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteStudent(student.id)}
-                        className="text-red-600 hover:text-red-900 p-1 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+         
+<thead className="bg-gray-50">
+  <tr>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      التلميذ
+    </th>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      الرمز
+    </th>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      المستوى
+    </th>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      القسم
+    </th>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      النوع
+    </th>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      هاتف الأب
+    </th>
+    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+      هاتف الأم
+    </th>
+<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+  نوع ولي الأمر
+</th>
+
+    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+      الإجراءات
+    </th>
+  </tr>
+</thead>
+ 
+    <tbody className="bg-white divide-y divide-gray-200">
+  {filteredStudents.map(student => (
+    <tr 
+      key={student.id} 
+ 
+  className={`
+    transition-colors duration-150
+    ${selectedRowId === student.id 
+      ? 'bg-green-500 border-l-4 border-green-600 selected-row'  // <-- أضفنا كلاس مخصص
+      : 'hover:bg-gray-50'
+    }
+  `}
+  onClick={() => setSelectedRowId(student.id)}
+>
+ 
+      {/* خلية اسم التلميذ */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-black-900">
+        {`${student.firstName} ${student.lastName}`}
+      </td>
+
+      {/* خلية الرمز */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-black-500">
+        {student.nationalId}
+      </td>
+
+      {/* خلية المستوى */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+        {student.level || '---'}
+      </td>
+
+      {/* خلية القسم */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-black-700">
+        {student.section || '---'}
+      </td>
+
+      {/* خلية النوع */}
+      <td className="px-6 py-4 whitespace-nowrap text-center">
+        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+          student.gender === 'ذكر' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
+        }`}>
+          {student.gender}
+        </span>
+      </td>
+
+      {/* ======================================= */}
+      {/* خلية هاتف الأب (مع الانتقال التلقائي) */}
+      {/* ======================================= */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-black-500 font-mono">
+        {editingCell?.studentId === student.id && editingCell?.field === 'father_phone' ? (
+          <input
+            type="tel"
+            autoFocus
+            defaultValue={student.father_phone || ''}
+            onBlur={(e) => handleQuickUpdate(student.id, 'father_phone', e.target.value, false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleQuickUpdate(student.id, 'father_phone', e.currentTarget.value, true);
+              }
+              if (e.key === 'Escape') {
+                setEditingCell(null);
+              }
+            }}
+            className="w-full px-2 py-1 border-2 border-black-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        ) : (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingCell({studentId: student.id, field: 'father_phone'});
+              setSelectedRowId(student.id);
+            }}
+            className="cursor-pointer hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+            title="انقر للتعديل - Enter للانتقال للأسفل"
+          >
+            {student.father_phone || '---'}
+          </div>
+        )}
+      </td>
+
+      {/* ======================================= */}
+      {/* خلية هاتف الأم (مع الانتقال التلقائي) */}
+      {/* ======================================= */}
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-black-500 font-mono">
+        {editingCell?.studentId === student.id && editingCell?.field === 'mother_phone' ? (
+          <input
+            type="tel"
+            autoFocus
+            defaultValue={student.mother_phone || ''}
+            onBlur={(e) => handleQuickUpdate(student.id, 'mother_phone', e.target.value, false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleQuickUpdate(student.id, 'mother_phone', e.currentTarget.value, true);
+              }
+              if (e.key === 'Escape') {
+                setEditingCell(null);
+              }
+            }}
+            className="w-full px-3 py-1 border-2 border-black-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+          />
+        ) : (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditingCell({studentId: student.id, field: 'mother_phone'});
+              setSelectedRowId(student.id);
+            }}
+            className="cursor-pointer hover:bg-blue-100 px-2 py-1 rounded transition-colors"
+            title="انقر للتعديل - Enter للانتقال للأسفل"
+          >
+            {student.mother_phone || '---'}
+          </div>
+        )}
+      </td>
+
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+  <select
+    value={student.guardian_pref || 'father'}
+    onChange={async (e) => {
+      const pref = e.target.value;
+      const guardian_phone = pref === 'father' ? student.father_phone : student.mother_phone;
+      try {
+        await dbManager.updateStudent(student.id, {
+          guardian_pref: pref,
+          guardian_phone: guardian_phone || ''
+        });
+        await loadStudents(); // إعادة تحميل البيانات لتحديث الواجهة
+      } catch (err) {
+        console.error('فشل تحديث ولي الأمر:', err);
+      }
+    }}
+    className="border rounded px-2 py-1 w-full"
+  >
+    <option value="father">الأب</option>
+    <option value="mother">الأم</option>
+  </select>
+</td>
+
+
+      {/* خلية الإجراءات */}
+      <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={(e) => { e.stopPropagation(); handleView(student); }} className="text-black-400 hover:text-green-600 transition-colors duration-200" title="عرض">
+            <Eye className="w-5 h-5" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleEdit(student); }} className="text-black-400 hover:text-blue-600 transition-colors duration-200" title="تعديل">
+            <Pencil className="w-5 h-5" />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleDeleteConfirmation(student.id); }} className="text-black-400 hover:text-red-600 transition-colors duration-200" title="حذف">
+            <Trash2 className="w-5 h-5" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
+
+
           </table>
         </div>
         

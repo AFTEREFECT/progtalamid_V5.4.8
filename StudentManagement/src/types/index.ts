@@ -39,6 +39,13 @@ export interface Student {
   province: string;          // الإقليم/العمالة
   municipality: string;     // الجماعة
   institution: string;       // المؤسسة
+  guardian_phone: string;
+  guardian_pref: 'father' | 'mother' | '';
+  phoneStudent: string;                    // رقم التلميذ الجديد
+  contact_preference: 'student' | 'father' | 'mother' | 'guardian_pref'; // نوع الاتصال
+  father_phone?: string;
+  mother_phone?: string;
+
   createdAt: string;         // تاريخ الإنشاء
   updatedAt: string;         // تاريخ آخر تحديث
 }

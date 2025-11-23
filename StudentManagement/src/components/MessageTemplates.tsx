@@ -153,15 +153,32 @@ export const MessageTemplates: React.FC = () => {
 
                   <div>
                     <label className="block text-sm font-bold text-gray-700 mb-2">الفئة</label>
-                    <select
-                      value={editingTemplate?.category || 'غياب'}
-                      onChange={(e) => setEditingTemplate({ ...editingTemplate!, category: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                    >
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
+                    <div>
+  <label className="block text-sm font-bold text-gray-700 mb-2">الفئة</label>
+  <select
+    value={editingTemplate?.category || 'غياب'}
+    onChange={(e) => setEditingTemplate({ ...editingTemplate!, category: e.target.value })}
+    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 bg-white"
+    style={{
+      color: '#111827',  // gray-900
+    }}
+  >
+    {categories.map(cat => (
+      <option 
+        key={cat} 
+        value={cat}
+        style={{
+          color: '#000000',           // ✅ نص أسود واضح
+          backgroundColor: '#ffffff', // ✅ خلفية بيضاء
+          padding: '8px'              // ✅ مسافة داخلية
+        }}
+      >
+        {cat}
+      </option>
+    ))}
+  </select>
+</div>
+
                   </div>
 
                   <div>

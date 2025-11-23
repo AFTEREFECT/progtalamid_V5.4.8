@@ -45,41 +45,51 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDeveloperM
 
   // هيكل القائمة المنظم
   const menuSections = [
-    {
+        {
       id: 'dashboard',
       title: 'لوحة التحكم',
       icon: Home,
       color: 'from-blue-500 to-cyan-500',
       items: [
         { id: 'dashboard', label: 'لوحة التحكم', icon: Home },
+         { id: 'educational-structure', label: 'البنية التربوية', icon: BarChart3 },
         { id: 'subscription-management', label: 'إدارة الاشتراك', icon: CreditCard },
-        { id: 'waaku-connection', label: 'ربط WhatsApp', icon: Smartphone },
+       
       ]
-    },
-    
-    {
-      id: 'institution',
-      title: 'المؤسسة',
-      icon: Building,
-      color: 'from-purple-500 to-pink-500',
-      items: [
-        { id: 'advanced-institution-settings', label: 'إعدادات المؤسسة', icon: Building },
-        { id: 'educational-structure', label: 'البنية التربوية', icon: BarChart3 },
-      ]
+ 
     },
 
-    {
+
+      {
       id: 'import',
       title: 'استيراد البيانات',
       icon: FileSpreadsheet,
       color: 'from-green-500 to-emerald-500',
       items: [
         { id: 'comprehensive-import', label: 'استيراد اللوائح والمستويات', icon: FileSpreadsheet },
+        { id: "tuteur-import", label: "استيراد بيانات الأولياء"  , icon: Building  }, 
+         { id: 'guardian-phones', label: 'تدبير أرقام أولياء الأمور', icon: Smartphone }, // <-- هنا
         { id: 'credentials-import', label: 'استيراد الأكواد السرية', icon: Key },
         { id: 'schedule-import', label: 'استيراد جداول الحصص', icon: Calendar },
       ]
     },
+    
+ {
+      id: 'whatsapp',
+      title: 'تواصل واشعارات',
+      icon: MessageSquare,
+      color: 'from-green-500 to-lime-500',
+      items: [
+         { id: 'waaku-connection', label: 'ربط WhatsApp', icon: Smartphone },
+        { id: 'whatsapp-communication', label: 'التواصل عبر واتساب', icon: Send },
+         { id: 'credentials', label: 'ارسال القن السري (متمدرس) للتلميذ', icon: Key },
+        { id: 'message-templates', label: 'نماذج الرسائل', icon: FileText },
+      
+      //  { id: 'whatsapp-settings', label: 'إعدادات واتساب', icon: MessageSquare },
 
+      ]
+    },
+      
     {
       id: 'students',
       title: 'إدارة التلاميذ',
@@ -89,7 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDeveloperM
         { id: 'students', label: 'إدارة التلاميذ', icon: Users },
         { id: 'incoming-students', label: 'التلاميذ الوافدين', icon: Users },
         { id: 'outgoing-students', label: 'التلاميذ المغادرين', icon: Users },
-        { id: 'credentials', label: 'الأكواد السرية', icon: Key },
+       
         { id: 'school-entry-overview', label: 'تتبع الدخول المدرسي', icon: Calculator },
       ]
     },
@@ -115,20 +125,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDeveloperM
       ]
     },
 
-    {
-      id: 'whatsapp',
-      title: 'تواصلو اخبار',
-      icon: MessageSquare,
-      color: 'from-green-500 to-lime-500',
-      items: [
-        { id: 'whatsapp-communication', label: 'التواصل عبر واتساب', icon: Send },
-        { id: 'message-templates', label: 'نماذج الرسائل', icon: FileText },
-        { id: 'waha-dashboard', label: 'لوحة تحكمahw', icon: Server },
-        { id: 'whatsapp-settings', label: 'إعدادات واتساب', icon: MessageSquare },
-      ]
-    },
-
-    {
+/*    {
       id: 'quiz',
       title: 'الروائز',
       icon: Scan,
@@ -136,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDeveloperM
       items: [
         { id: 'quiz-management', label: 'نظام الروائز', icon: Scan },
       ]
-    },
+    },*/
 
     {
       id: 'reports',
@@ -145,6 +142,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDeveloperM
       color: 'from-pink-500 to-rose-500',
       items: [
         { id: 'printable-reports', label: 'التقارير القابلة للطباعة', icon: FileText },
+      ]
+    },
+      {
+      id: 'institution',
+      title: 'المؤسسة',
+      icon: Building,
+      color: 'from-purple-500 to-pink-500',
+      items: [
+        { id: 'advanced-institution-settings', label: 'إعدادات المؤسسة', icon: Building },
+       
       ]
     },
 
@@ -271,20 +278,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isDeveloperM
                         const isActive = activeTab === item.id;
 
                         return (
-                          <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg text-right transition-all duration-200 group ${
-                              isActive
-                                ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white shadow-lg scale-[1.02] border-r-4 border-white'
-                                : 'text-white/70 hover:bg-white/10 hover:text-white hover:scale-[1.01]'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <ItemIcon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
-                              <span className="text-sm truncate">{item.label}</span>
-                            </div>
-                          </button>
+                        <button
+  key={item.id}
+  onClick={() => setActiveTab(item.id)}
+  className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 rounded-lg text-right transition-all duration-200 group ${
+    isActive
+      ? 'bg-gradient-to-r from-yellow-400 via-orange-500 to-pink-500 text-white shadow-lg scale-[1.02] border-r-4 border-white'
+      : 'text-white/70 hover:bg-white/10 hover:text-white hover:scale-[1.01]'
+  }`}
+>
+  <div className="flex items-center gap-3 flex-1 min-w-0">
+    {ItemIcon && (
+      <ItemIcon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-white/60 group-hover:text-white'}`} />
+    )}
+    <span className="text-sm truncate">{item.label}</span>
+  </div>
+</button>
+
                         );
                       })}
                     </div>
