@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Key, Shield, CheckCircle, XCircle, AlertCircle, Calendar, Gift, CreditCard } from 'lucide-react';
 import { subscriptionManager, SubscriptionPlan, Subscription } from '../utils/subscriptionManager';
+import { trialManager } from '../utils/trialManager';
 import PaymentInfo from './PaymentInfo';
 
 export const SubscriptionManagement: React.FC = () => {
@@ -43,7 +44,6 @@ export const SubscriptionManagement: React.FC = () => {
       setMessage({ type: 'error', text: 'يرجى إدخال رمز الترخيص' });
       return;
     }
-
     if (!institutionName.trim()) {
       setMessage({ type: 'error', text: 'يرجى إدخال اسم المؤسسة' });
       return;
@@ -56,9 +56,18 @@ export const SubscriptionManagement: React.FC = () => {
       const result = await subscriptionManager.activateLicense(licenseKey, institutionName);
 
       if (result.success) {
+        // إنهاء التجربة نهائياً بعد التفعيل المدفوع
+        try {
+          await trialManager.markAsConverted();
+          trialManager.clearLocalTrialData();
+        } catch (err) {
+          console.warn('فشل تنظيف بيانات التجربة بعد التفعيل:', err);
+        }
+
         setMessage({ type: 'success', text: result.message });
         setLicenseKey('');
         await loadData();
+        window.location.reload();
       } else {
         setMessage({ type: 'error', text: result.message });
       }

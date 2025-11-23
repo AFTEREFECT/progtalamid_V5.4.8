@@ -36,11 +36,13 @@ export const WhatsAppCommunication: React.FC = () => {
   const [sendProgress, setSendProgress] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [modalMessage, setModalMessage] = useState({ type: '', text: '' });
+ 
 
   useEffect(() => {
-    loadData();
-    loadMessageTemplates();
-  }, []);
+  loadData();
+  loadMessageTemplates(); // سيصبح الآن async ويجلب القوالب من قاعدة البيانات
+}, []);
+
 
   useEffect(() => {
     if (searchTerm.length >= 2) {
@@ -49,6 +51,9 @@ export const WhatsAppCommunication: React.FC = () => {
       setSearchResults([]);
     }
   }, [searchTerm]);
+
+
+
 
   const loadData = async () => {
     try {
@@ -70,31 +75,32 @@ export const WhatsAppCommunication: React.FC = () => {
     }
   };
 
-  const loadMessageTemplates = () => {
-    const templates = [
-      {
-        name: 'إشعار عام',
-        content: 'السلام عليكم ورحمة الله وبركاته\n\nعزيزي ولي أمر التلميذ(ة): {STUDENT_NAME}\n\n{MESSAGE}\n\nشكراً لتعاونكم\nإدارة المؤسسة'
-      },
-      {
-        name: 'إشعار غياب',
-        content: 'السلام عليكم\n\nنفيدكم بأن ابنكم/ابنتكم {STUDENT_NAME} تغيب عن الحصص الدراسية اليوم {DATE}\n\nيرجى الاتصال بالإدارة للاستفسار.\n\nمع التحية'
-      },
-      {
-        name: 'دعوة لاجتماع',
-        content: 'السلام عليكم\n\nندعوكم لحضور اجتماع أولياء الأمور يوم {DATE} على الساعة {TIME}\n\nالموضوع: {SUBJECT}\n\nحضوركم مهم\nالإدارة'
-      },
-      {
-        name: 'تهنئة',
-        content: 'تهانينا الحارة لابنكم/ابنتكم {STUDENT_NAME}\n\n{MESSAGE}\n\nنتمنى له/لها المزيد من التفوق والنجاح'
-      },
-      {
-        name: 'إشعار مالي',
-        content: 'السلام عليكم\n\nنذكركم بضرورة تسديد الواجبات المالية الخاصة بـ {STUDENT_NAME}\n\nالمبلغ: {AMOUNT}\nآخر أجل: {DATE}\n\nشكراً لتعاونكم'
-      }
-    ];
-    setMessageTemplates(templates);
-  };
+const loadMessageTemplates = async () => {
+  try {
+    const dbTemplates = await dbManager.getMessageTemplates();
+    if (dbTemplates && dbTemplates.length > 0) {
+      setMessageTemplates(dbTemplates);
+    } else {
+      // احتياطي: قوالب افتراضية إذا لم توجد بيانات
+      setMessageTemplates([
+        {
+          name: 'إشعار عام',
+          content: 'السلام عليكم ورحمة الله وبركاته\n\nعزيزي ولي أمر التلميذ(ة): {STUDENT_NAME}\n\n{MESSAGE}\n\nشكراً لتعاونكم\nإدارة المؤسسة'
+        },
+        {
+          name: 'إشعار غياب',
+          content: 'السلام عليكم\n\nنفيدكم بأن ابنكم/ابنتكم {STUDENT_NAME} تغيب عن الحصص الدراسية اليوم {DATE}\n\nيرجى الاتصال بالإدارة للاستفسار.\n\nمع التحية'
+        },
+        // ... يمكن إضافة المزيد من القوالب الأساسية هنا
+      ]);
+    }
+  } catch (err) {
+    console.error('فشل تحميل نماذج الرسائل:', err);
+    // fallback في حال وجود خطأ
+    setMessageTemplates([]);
+  }
+};
+
 
   const performSearch = async () => {
     const term = searchTerm.toLowerCase().trim();
@@ -226,7 +232,7 @@ const handleSend = async () => {
   setSendProgress(0);
 
   try {
-    console.log('🔍 بدء إرسال الرسائل عبر Waaku');
+    console.log('🔍 بدء إرسال الرسائل   ');
     console.log(`📊 عدد المستلمين: ${recipients.length}`);
 
     let successCount = 0;
@@ -247,7 +253,7 @@ const handleSend = async () => {
 
       console.log(`📤 إرسال إلى: ${recipient.name} - ${recipient.phone}`);
 
-      // ⚡ استخدام unifiedWhatsAppService (الذي يستخدم Waaku)
+      // ⚡ استخدام unifiedWhatsAppService (الذي يستخدم    )
       const result = await unifiedWhatsAppService.sendMessage(recipient.phone, personalizedMessage);
 
       if (result.success) {

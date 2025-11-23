@@ -131,15 +131,14 @@ const GuardianPhoneManagement: React.FC = () => {
   };
 
   // تحديث دفعي لجميع التلاميذ
- const batchUpdateGuardianPhones = async () => {
+  // تحديث دفعي لجميع التلاميذ (ولي الأمر)
+const batchUpdateGuardianPhones = async () => {
   if (!window.confirm('هل تريد تحديث جميع أرقام الاتصال دفعة واحدة؟')) return;
-  setIsLoading(true);
+  setIsLoading(true); // 1. تفعيل التحميل
 
-  const failedUpdates = []; // مصفوفة لتتبع التحديثات الفاشلة
-
-  for (const student of students) {
-    try {
-      // نفس منطق الأولوية الخاص بك
+  const failedUpdates = [];
+  try {
+    for (const student of students) {
       const hasFatherPhone = student.father_phone?.trim();
       const hasMotherPhone = student.mother_phone?.trim();
 
@@ -153,38 +152,36 @@ const GuardianPhoneManagement: React.FC = () => {
         guardian_phone = student.mother_phone;
         contact_preference = 'mother';
       } else {
-        // إذا لم يكن هناك هاتف للأب أو الأم، تجاهل هذا الطالب وانتقل إلى التالي
-        continue; // This is the key: skip to the next iteration of the loop
+        continue; // تجاهل
       }
 
-      // قم بالتحديث فقط إذا وجدنا رقم هاتف
-      await dbManager.updateStudent(student.id, {
-        guardian_phone,
-        contact_preference,
-      });
-
-    } catch (error) {
-      console.error(`فشل تحديث الطالب: ${student.firstName} ${student.lastName} (ID: ${student.id})`, error);
-      failedUpdates.push(student); // أضف الطالب الفاشل إلى القائمة
+      try {
+        await dbManager.updateStudent(student.id, {
+          guardian_phone,
+          contact_preference,
+        });
+      } catch (err) {
+        console.error(`فشل تحديث الطالب: ${student.firstName} ${student.lastName} (ID: ${student.id})`, err);
+        failedUpdates.push(student);
+      }
     }
+    if (failedUpdates.length > 0) {
+      alert(`اكتملت العملية، لكن فشل تحديث ${failedUpdates.length} طالب. راجع الـ console.`);
+    } else {
+      alert('تم تحديث جميع أرقام الاتصال بنجاح.');
+    }
+    const studentsData = await dbManager.getStudents();
+    setStudents(studentsData);
+  } catch (globalError) {
+    alert('حدث خطأ: ' + (globalError instanceof Error ? globalError.message : globalError));
+    console.error(globalError);
+  } finally {
+    setIsLoading(false); // 2. إرجاع التحميل مهما حدث
   }
-
-  setIsLoading(false);
-
-  // إبلاغ المستخدم بالنتيجة النهائية
-  if (failedUpdates.length > 0) {
-    alert(`اكتملت العملية، لكن فشل تحديث ${failedUpdates.length} طالب. يرجى مراجعة الـ console لمزيد من التفاصيل.`);
-    console.log("الطلاب الذين فشل تحديثهم:", failedUpdates);
-  } else {
-    alert('تم تحديث جميع أرقام الاتصال بنجاح.');
-  }
-
-  // إعادة تحميل البيانات لإظهار التغييرات
-  const studentsData = await dbManager.getStudents();
-  setStudents(studentsData);
 };
 
 
+// تحديث دفعي لأرقام التلاميذ (رقم التلميذ أولاً الأم ثم الأب)
 const batchUpdateStudentPhones = async () => {
   if (!window.confirm('هل تريد تحديث أرقام التلاميذ باستخدام رقم الأم أولاً ثم رقم الأب؟')) return;
   setIsLoading(true);
@@ -201,16 +198,20 @@ const batchUpdateStudentPhones = async () => {
         student_phone = student.father_phone;
       }
 
-      await dbManager.updateStudent(student.id, {
-        phone: student_phone,
-      });
+      try {
+        await dbManager.updateStudent(student.id, {
+          phone: student_phone,
+        });
+      } catch (err) {
+        console.error('فشل تحديث رقم التلميذ:', err, student);
+      }
     }
     alert('تم تحديث أرقام التلاميذ بنجاح حسب منطق رقم الأم ثم الأب.');
     const studentsData = await dbManager.getStudents();
     setStudents(studentsData);
   } catch (error) {
-    console.error('خطأ في التحديث الدفعي لأرقام التلاميذ:', error);
-    alert('فشل التحديث الدفعي لأرقام التلاميذ.');
+    alert('خطأ في التحديث الدفعي لأرقام التلاميذ: ' + (error instanceof Error ? error.message : error));
+    console.error(error);
   } finally {
     setIsLoading(false);
   }

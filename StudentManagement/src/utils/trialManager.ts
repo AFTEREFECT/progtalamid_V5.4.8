@@ -2,7 +2,7 @@
  * مدير جلسات التجربة المجانية - نظام محمي ومتقدم
  *
  * الميزات:
- * - تجربة مجانية لمدة 7 أيام بدون كود
+ * - تجربة مجانية لمدة 10 أيام بدون كود
  * - حماية قوية ضد التلاعب (الوقت، المتصفح، التخزين)
  * - كشف الوضع الخاص (Incognito)
  * - تتبع إحصائيات الاستخدام
@@ -38,6 +38,48 @@ class TrialManager {
   private fingerprintKey = 'device_fp_secure';
 
   /**
+   * بدء تجربة مجانية آمنة من السيرفر (10 أيام)
+   */
+  async startServerTrial(): Promise<{ success: boolean; message: string }> {
+    try {
+      // 1. منع الوضع المخفي
+      if (await this.detectIncognitoMode()) {
+        return {
+          success: false,
+          message: 'عذراً، لا يمكن بدء التجربة المجانية في الوضع المخفي (Incognito). يرجى استخدام الوضع العادي.'
+        };
+      }
+
+      // 2. الحصول على البصمة
+      const fingerprint = await this.getDeviceFingerprint();
+      
+      // 3. استدعاء السيرفر لبدء التجربة
+      const { data, error } = await supabase.rpc('start_secure_trial', {
+        p_device_fingerprint: fingerprint
+      });
+
+      if (error) throw error;
+
+      // 4. حفظ البيانات محلياً للاستخدام السريع
+      if (data.success) {
+        const sessionData = {
+          fingerprint,
+          startedAt: new Date().toISOString()
+        };
+        localStorage.setItem(this.localStorageKey, JSON.stringify(sessionData));
+      }
+
+      return data as { success: boolean; message: string };
+    } catch (error) {
+      console.error('❌ خطأ في بدء التجربة:', error);
+      return { 
+        success: false, 
+        message: 'حدث خطأ في الاتصال بالخادم. يرجى المحاولة لاحقاً.' 
+      };
+    }
+  }
+
+  /**
    * توليد بصمة فريدة للجهاز (محسّنة)
    */
   private async generateDeviceFingerprint(): Promise<string> {
@@ -53,14 +95,10 @@ class TrialManager {
       new Date().getTimezoneOffset(),
       navigator.platform,
       navigator.maxTouchPoints || 0,
-      // معلومات إضافية
       window.devicePixelRatio || 1,
       navigator.vendor || '',
-      // كشف WebGL
       await this.getWebGLFingerprint(),
-      // كشف Canvas
       await this.getCanvasFingerprint(),
-      // كشف Audio
       await this.getAudioFingerprint(),
     ];
 
@@ -86,7 +124,6 @@ class TrialManager {
       canvas.width = 280;
       canvas.height = 60;
 
-      // رسم معقد لزيادة الفرادة
       ctx.textBaseline = 'top';
       ctx.font = '16px "Arial"';
       ctx.textBaseline = 'alphabetic';
@@ -97,7 +134,6 @@ class TrialManager {
       ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
       ctx.fillText('TrialSystem', 4, 45);
 
-      // إضافة أشكال
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = 'rgb(255,0,255)';
       ctx.beginPath();
@@ -107,7 +143,6 @@ class TrialManager {
 
       const dataURL = canvas.toDataURL();
 
-      // Hash للـ canvas data
       const encoder = new TextEncoder();
       const data = encoder.encode(dataURL);
       const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -209,7 +244,6 @@ class TrialManager {
       // طريقة 1: فحص storage quota
       if ('storage' in navigator && 'estimate' in navigator.storage) {
         const { quota = 0 } = await navigator.storage.estimate();
-        // في الوضع الخاص، الحد الأقصى للتخزين عادة أقل بكثير
         if (quota < 120000000) { // أقل من 120MB
           return true;
         }
@@ -261,7 +295,6 @@ class TrialManager {
       const clientTime = new Date();
       const deviceFP = await this.getDeviceFingerprint();
 
-      // استدعاء دالة فحص الوقت في Supabase
       const { data, error } = await supabase.rpc('check_time_sync', {
         p_device_fingerprint: deviceFP,
         p_client_time: clientTime.toISOString()
@@ -299,78 +332,15 @@ class TrialManager {
   }
 
   /**
-   * بدء جلسة تجريبية جديدة
+   * بدء جلسة تجريبية جديدة (طريقة قديمة - محفوظة للتوافق)
    */
   async startTrialSession(): Promise<{ success: boolean; message: string; session?: TrialSession }> {
-    try {
-      // كشف الوضع الخاص
-      const isIncognito = await this.detectIncognitoMode();
-      if (isIncognito) {
-        return {
-          success: false,
-          message: 'لا يمكن استخدام البرنامج في وضع التصفح الخاص. يرجى استخدام وضع التصفح العادي.'
-        };
-      }
-
-      // التحقق من تزامن الوقت
-      const timeCheck = await this.checkTimeSync();
-      if (!timeCheck.isValid) {
-        return {
-          success: false,
-          message: 'تم اكتشاف تلاعب في توقيت النظام. يرجى ضبط الوقت بشكل صحيح.'
-        };
-      }
-
-      const deviceFP = await this.getDeviceFingerprint();
-      const browserInfo = this.getBrowserInfo();
-
-      // استدعاء دالة بدء التجربة في Supabase
-      const { data, error } = await supabase.rpc('start_trial_session', {
-        p_device_fingerprint: deviceFP,
-        p_browser_info: browserInfo,
-        p_trial_duration_days: 7
-      });
-
-      if (error) {
-        console.error('خطأ في بدء التجربة:', error);
-        return {
-          success: false,
-          message: 'فشل بدء التجربة المجانية. يرجى المحاولة مرة أخرى.'
-        };
-      }
-
-      if (!data.success) {
-        return {
-          success: false,
-          message: data.message
-        };
-      }
-
-      // حفظ البيانات محلياً
-      const sessionData = {
-        session: data.session,
-        savedAt: new Date().toISOString()
-      };
-      localStorage.setItem(this.localStorageKey, JSON.stringify(sessionData));
-
-      // تسجيل في الإحصائيات
-      await this.logAction('trial', 'trial_started', {
-        trial_duration: 7,
-        browser_info: browserInfo
-      });
-
-      return {
-        success: true,
-        message: data.message,
-        session: data.session
-      };
-    } catch (error) {
-      console.error('خطأ في startTrialSession:', error);
-      return {
-        success: false,
-        message: 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.'
-      };
-    }
+    // الآن نستخدم startServerTrial بدلاً منها
+    const result = await this.startServerTrial();
+    return {
+      success: result.success,
+      message: result.message
+    };
   }
 
   /**
@@ -378,7 +348,6 @@ class TrialManager {
    */
   async checkTrialStatus(): Promise<TrialStatus> {
     try {
-      // التحقق من تزامن الوقت أولاً
       const timeCheck = await this.checkTimeSync();
       if (!timeCheck.isValid) {
         return {
@@ -393,21 +362,18 @@ class TrialManager {
 
       const deviceFP = await this.getDeviceFingerprint();
 
-      // استدعاء دالة التحقق في Supabase
       const { data, error } = await supabase.rpc('check_trial_validity', {
         p_device_fingerprint: deviceFP
       });
 
       if (error) {
         console.error('خطأ في التحقق من التجربة:', error);
-        // محاولة الاعتماد على البيانات المحلية
         return this.checkLocalTrialStatus();
       }
 
       const daysRemaining = data.days_remaining || 0;
       const hoursRemaining = daysRemaining * 24;
 
-      // تحديث البيانات المحلية
       if (data.session) {
         const sessionData = {
           session: data.session,
@@ -518,7 +484,6 @@ class TrialManager {
       await supabase
         .from('trial_sessions')
         .update({
-          session_count: supabase.rpc('session_count + 1'),
           last_activity: new Date().toISOString()
         })
         .eq('device_fingerprint', deviceFP);
@@ -551,7 +516,7 @@ class TrialManager {
   }
 
   /**
-   * مسح بيانات التجربة المحلية (للاختبار فقط)
+   * مسح بيانات التجربة المحلية (للتطوير فقط)
    */
   clearLocalTrialData(): void {
     localStorage.removeItem(this.localStorageKey);

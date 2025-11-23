@@ -17,7 +17,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    console.log('📥 [waaku-send-message] New request received');
+    console.log('📥 [ -send-message] New request received');
 
     // Create Supabase client
     const supabaseClient = createClient(
@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
 
     // Parse request body
     const body = await req.json();
-    console.log('📦 [waaku-send-message] Request body:', JSON.stringify(body));
+    console.log('📦 [wa-send-message] Request body:', JSON.stringify(body));
 
     // قبول كلا من 'id' و 'institutionId'
     const institutionId = body.id || body.institutionId;
@@ -35,7 +35,7 @@ Deno.serve(async (req: Request) => {
 
     // Validate inputs
     if (!institutionId) {
-      console.error('❌ [waaku-send-message] Missing institution ID');
+      console.error('❌ [    -send-message] Missing institution ID');
       return new Response(
         JSON.stringify({ 
           error: 'Institution ID is required',
@@ -49,7 +49,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!to || !message) {
-      console.error('❌ [waaku-send-message] Missing required fields');
+      console.error('❌ [    -send-message] Missing required fields');
       return new Response(
         JSON.stringify({ 
           error: 'Recipient (to) and message are required',
@@ -62,8 +62,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`🔍 [waaku-send-message] Institution ID: ${institutionId}`);
-    console.log(`📞 [waaku-send-message] Recipient: ${to}`);
+    console.log(`🔍 [wa-send-message] Institution ID: ${institutionId}`);
+    console.log(`📞 [wa-send-message] Recipient: ${to}`);
 
     // Fetch institution from database
     const { data: institution, error: fetchError } = await supabaseClient
@@ -73,7 +73,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (fetchError || !institution) {
-      console.error('❌ [waaku-send-message] Institution not found:', fetchError);
+      console.error('❌ [wa-send-message] Institution not found:', fetchError);
       return new Response(
         JSON.stringify({ 
           error: 'Institution not found',
@@ -87,11 +87,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`✅ [waaku-send-message] Found institution: ${institution.name}`);
+    console.log(`✅ [wa-send-message] Found institution: ${institution.name}`);
 
     // Check session exists
     if (!institution.whatsapp_session_id) {
-      console.error('❌ [waaku-send-message] No session ID');
+      console.error('❌ [wa-send-message] No session ID');
       return new Response(
         JSON.stringify({ 
           error: 'No WhatsApp session found for this institution',
@@ -104,11 +104,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`🔑 [waaku-send-message] Session ID: ${institution.whatsapp_session_id}`);
+    console.log(`🔑 [wa-send-message] Session ID: ${institution.whatsapp_session_id}`);
 
     // Check session is connected
     if (institution.whatsapp_session_status !== 'CONNECTED') {
-      console.error('❌ [waaku-send-message] Session not connected:', institution.whatsapp_session_status);
+      console.error('❌ [wa-send-message] Session not connected:', institution.whatsapp_session_status);
       return new Response(
         JSON.stringify({ 
           error: 'WhatsApp session is not connected',
@@ -122,7 +122,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('✅ [waaku-send-message] Session is CONNECTED');
+    console.log('✅ [wa-send-message] Session is CONNECTED');
 
     // Format phone number
     let formattedPhone = to.replace(/\D/g, '');
@@ -140,12 +140,12 @@ Deno.serve(async (req: Request) => {
     // تنسيق WhatsApp
     const whatsappNumber = formattedPhone + '@c.us';
 
-    console.log(`📱 [waaku-send-message] Formatted number: ${whatsappNumber}`);
+    console.log(`📱 [wa-send-message] Formatted number: ${whatsappNumber}`);
 
     // Send message via Waaku
     const waakuUrl = `${WAAKU_SERVER_URL}/api/sessions/${institution.whatsapp_session_id}/send`;
     
-    console.log(`🚀 [waaku-send-message] Sending to Waaku: ${waakuUrl}`);
+    console.log(`🚀 [wa-send-message] Sending to wa: ${waakuUrl}`);
 
     const waakuResponse = await fetch(waakuUrl, {
       method: 'POST',
@@ -159,25 +159,25 @@ Deno.serve(async (req: Request) => {
       }),
     });
 
-    console.log(`📊 [waaku-send-message] Waaku response status: ${waakuResponse.status}`);
+    console.log(`📊 [wa-send-message] Waaku response status: ${waakuResponse.status}`);
 
     const responseText = await waakuResponse.text();
-    console.log(`📄 [waaku-send-message] Waaku response body: ${responseText}`);
+    console.log(`📄 [wa-send-message] Waaku response body: ${responseText}`);
 
     let waakuData;
     try {
       waakuData = JSON.parse(responseText);
     } catch (e) {
-      console.warn('⚠️ [waaku-send-message] Could not parse response as JSON');
+      console.warn('⚠️ [wa-send-message] Could not parse response as JSON');
       waakuData = { raw: responseText };
     }
 
     // Check Waaku response
     if (!waakuResponse.ok) {
-      console.error('❌ [waaku-send-message] Waaku returned error');
+      console.error('❌ [wa-send-message] Waaku returned error');
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to send message via Waaku',
+          error: '',
           status: waakuResponse.status,
           details: waakuData 
         }),
@@ -188,7 +188,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('✅ [waaku-send-message] Message sent successfully!');
+    console.log('✅ [wa-send-message] Message sent successfully!');
 
     // Return success
     return new Response(
@@ -205,7 +205,7 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error('❌ [waaku-send-message] Unexpected error:', error);
+    console.error('❌ [wa-send-message] Unexpected error:', error);
     
     return new Response(
       JSON.stringify({ 

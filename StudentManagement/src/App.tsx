@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 
 import TuteurImport from './components/TuteurImport';
 import GuardianPhoneManagement from './components/GuardianPhoneManagement';
-
 import { dbManager } from './utils/database';
 import { licenseManager } from './utils/licenseManager';
 import { trialManager } from './utils/trialManager';
+import { subscriptionManager } from './utils/subscriptionManager';
+import { accessControl } from './utils/accessControl'; // الإضافة الجديدة للنظام الآمن
 import { LicenseActivation } from './components/LicenseActivation';
 import { TrialExpired } from './components/TrialExpired';
 import { TrialCountdown } from './components/TrialCountdown';
@@ -40,21 +41,16 @@ import IncomingStudentsManagement from './components/IncomingStudentsManagement'
 import OutgoingStudentsManagement from './components/OutgoingStudentsManagement';
 import AboutProgram from './components/AboutProgram';
 import AttendanceSheetGenerator from './components/AttendanceSheetGenerator';
-import { WhatsAppSettings } from './components/WhatsAppSettings';
 import { UnifiedWhatsAppSettings } from './components/UnifiedWhatsAppSettings';
 import { WaakuWhatsAppConnection } from './components/WaakuWhatsAppConnection';
 import { WhatsAppCommunication } from './components/WhatsAppCommunication';
 import { AbsenceManagement } from './components/AbsenceManagement';
 import { MessageTemplates } from './components/MessageTemplates';
 import { ScheduleImport } from './components/ScheduleImport';
-import { TimetablePrint } from './components/TimetablePrint';
 import { TimetablePrintManager } from './components/TimetablePrintManager';
 import { SubscriptionManagement } from './components/SubscriptionManagement';
 import { SubscriptionAdmin } from './components/SubscriptionAdmin';
 import { TrialAnalytics } from './components/TrialAnalytics';
-import {ahwDashboard } from './components/WAHADashboard';
-//import TuteurImport from './components/TuteurImport';
-
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -92,69 +88,67 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // التحقق من الترخيص والتجربة عند بدء التشغيل
+  // التحقق الآمن من الصلاحية (Server-Side Verification) - النظام الجديد
   useEffect(() => {
-    const checkLicenseAndTrial = async () => {
+    const verifyAccess = async () => {
       try {
-        console.log('🔒 التحقق من الترخيص والتجربة...');
+        setLicenseChecking(true);
+        console.log('🛡️ بدء التحقق الآمن من الصلاحية...');
+        
+        // استدعاء الحارس الموجود في السيرفر
+        const status = await accessControl.checkAccess();
+        console.log('📋 حالة الوصول من السيرفر:', status);
 
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout')), 10000);
-        });
-
-        let licenseStatus;
-        try {
-          licenseStatus = await Promise.race([
-            licenseManager.checkLicenseStatus(),
-            timeoutPromise
-          ]);
-          console.log('📊 حالة الترخيص:', licenseStatus);
-        } catch (licenseError) {
-          console.warn('⚠️ فشل التحقق من الترخيص، الانتقال للتجربة المجانية');
-          licenseStatus = { isValid: false };
-        }
-
-        if (licenseStatus.isValid) {
+        if (status.access === 'granted') {
+          // ✅ وصول مصرح به
           setLicenseValid(true);
-          setIsTrialMode(false);
+          
+          if (status.type === 'paid') {
+            // اشتراك مدفوع نشط
+            setIsTrialMode(false);
+            setTrialDaysRemaining(0);
+            setTrialHoursRemaining(0);
+            console.log(`✅ اشتراك مدفوع نشط: ${status.plan || 'غير محدد'}`);
+            
+            // تنظيف أي بقايا محلية للتجربة
+            trialManager.clearLocalTrialData();
+            
+            // تسجيل نشاط المستخدم
+            trialManager.logAction('paid', 'app_opened', {
+              plan: status.plan
+            }).catch(() => {});
 
-          trialManager.logAction('paid', 'app_opened', {
-            license_info: licenseManager.getCurrentLicenseInfo()
-          }).catch(err => console.warn('فشل تسجيل النشاط:', err));
-        } else {
-          let trialStatus;
-          try {
-            trialStatus = await Promise.race([
-              trialManager.checkTrialStatus(),
-              timeoutPromise
-            ]);
-            console.log('🎁 حالة التجربة:', trialStatus);
-          } catch (trialError) {
-            console.warn('⚠️ فشل التحقق من التجربة، عرض شاشة التفعيل');
-            trialStatus = { needsActivation: true, isValid: false };
-          }
-
-          if (trialStatus.isValid) {
-            setLicenseValid(true);
+          } else if (status.type === 'trial') {
+            // فترة تجريبية سارية
             setIsTrialMode(true);
-            setTrialDaysRemaining(trialStatus.daysRemaining);
-            setTrialHoursRemaining(trialStatus.hoursRemaining);
+            setTrialDaysRemaining(Math.ceil(status.days_remaining || 0));
+            setTrialHoursRemaining(Math.ceil(status.hours_remaining || 0));
+            console.log(`🎁 فترة تجريبية نشطة: ${status.days_remaining} يوم متبقي`);
 
-            trialManager.updateSessionActivity().catch(err => console.warn('فشل تحديث الجلسة:', err));
+            // تسجيل نشاط المستخدم
+            trialManager.updateSessionActivity().catch(() => {});
             trialManager.logAction('trial', 'app_opened', {
-              days_remaining: trialStatus.daysRemaining
-            }).catch(err => console.warn('فشل تسجيل النشاط:', err));
-          } else if (trialStatus.needsActivation) {
-            setLicenseValid(false);
+              days_remaining: status.days_remaining
+            }).catch(() => {});
+          }
+        } else {
+          // ❌ وصول مرفوض
+          setLicenseValid(false);
+          console.warn(`⛔ وصول مرفوض: ${status.reason || 'غير محدد'}`);
+          
+          if (status.reason === 'trial_expired') {
+            setShowTrialExpired(true);
+            setInitError('انتهت الفترة التجريبية المجانية');
+          } else if (status.reason === 'no_license') {
+            // لم يتم التفعيل بعد
             setShowTrialExpired(false);
           } else {
-            setLicenseValid(false);
-            setShowTrialExpired(true);
-            setInitError(trialStatus.message);
+            // خطأ في الاتصال أو سبب آخر
+            setShowTrialExpired(false);
           }
         }
       } catch (error) {
-        console.error('❌ خطأ في التحقق:', error);
+        console.error('❌ خطأ غير متوقع في التحقق:', error);
         setLicenseValid(false);
         setShowTrialExpired(false);
       } finally {
@@ -162,10 +156,10 @@ function App() {
       }
     };
 
-    checkLicenseAndTrial();
+    verifyAccess();
   }, []);
 
-  // تهيئة قاعدة البيانات بعد التحقق من الترخيص
+  // تهيئة قاعدة البيانات المحلية بعد التحقق من الترخيص
   useEffect(() => {
     if (licenseValid === true) {
       const initializeApp = async () => {
@@ -187,10 +181,11 @@ function App() {
   // معالج نجاح التفعيل
   const handleActivationSuccess = () => {
     setLicenseValid(true);
-    window.location.reload();
+    setIsTrialMode(false);
+    window.location.reload(); // إعادة تحميل للحصول على أحدث حالة من السيرفر
   };
 
-  // شاشة التحقق من الترخيص
+  // شاشة التحقق من الترخيص (Loading)
   if (licenseChecking) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-900 to-purple-900">
@@ -259,16 +254,15 @@ function App() {
       case 'students':
         return <StudentManagement />;
       case 'guardian-phones':
-       return <GuardianPhoneManagement />;
-
+        return <GuardianPhoneManagement />;
       case 'enrollment':
         return <SchoolEnrollmentImport />;
       case 'levels-setup':
         return <LevelsAndSectionsSetup />;
       case 'comprehensive-import':
         return <ComprehensiveImport />;
-        case "tuteur-import": 
-        return <TuteurImport/>;
+      case 'tuteur-import':
+        return <TuteurImport />;
       case 'credentials-import':
         return <CredentialsImport />;
       case 'credentials':
@@ -317,8 +311,6 @@ function App() {
         return <AboutProgram />;
       case 'attendance-sheet':
         return <AttendanceSheetGenerator />;
-     // case 'waha-dashboard':
-      //  return <WAHADashboard />;
       case 'whatsapp-settings':
         return <UnifiedWhatsAppSettings />;
       case 'whatsapp-communication':
@@ -344,6 +336,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50" dir="rtl">
+      {/* شريط التجربة - يظهر فقط إذا كان الوضع تجريبي */}
       {isTrialMode && trialDaysRemaining > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50">
           <TrialCountdown
@@ -379,8 +372,8 @@ function App() {
         />
       </div>
       
-      <main className={`flex-1 overflow-y-auto ${isTrialMode ? 'mt-0' : ''}`}>
-        <div className={`lg:hidden bg-gradient-to-r from-blue-600 to-purple-600 border-b border-blue-400 p-3 sm:p-4 sticky z-30 shadow-lg ${isTrialMode ? 'top-24' : 'top-0'}`}>
+      <main className={`flex-1 overflow-y-auto ${isTrialMode ? 'mt-24 sm:mt-20' : ''}`}>
+        <div className={`lg:hidden bg-gradient-to-r from-blue-600 to-purple-600 border-b border-blue-400 p-3 sm:p-4 sticky z-30 shadow-lg ${isTrialMode ? 'top-24 sm:top-20' : 'top-0'}`}>
           <button
             onClick={() => setSidebarOpen(true)}
             className="flex items-center gap-3 text-white hover:text-blue-100 bg-white/20 px-4 py-4 rounded-lg border border-white/30 hover:bg-white/30 transition-all duration-200 w-full backdrop-blur-sm"

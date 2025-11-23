@@ -41,17 +41,18 @@ export const TrialCountdown: React.FC<TrialCountdownProps> = ({
   const Icon = daysRemaining >= 5 ? CheckCircle : daysRemaining >= 2 ? Clock : AlertTriangle;
 
   // رسالة مخصصة حسب الأيام المتبقية
-  const getMessage = () => {
-    if (daysRemaining >= 5) {
-      return 'استمتع بالتجربة المجانية';
-    } else if (daysRemaining >= 2) {
-      return 'اشترك الآن ولا تفوت الفرصة';
-    } else if (daysRemaining === 1) {
-      return 'آخر يوم في التجربة المجانية';
-    } else {
-      return 'التجربة تنتهي اليوم';
-    }
-  };
+ const getMessage = () => {
+  if (daysRemaining >= 7) {
+    return 'استمتع بالتجربة المجانية لمدة 10 أيام';
+  } else if (daysRemaining >= 3) {
+    return 'اشترك الآن ولا تفوت الفرصة';
+  } else if (daysRemaining === 1) {
+    return 'آخر يوم في التجربة المجانية';
+  } else {
+    return 'التجربة تنتهي اليوم';
+  }
+};
+
 
   if (!isVisible) {
     // زر صغير لإعادة إظهار الشريط
