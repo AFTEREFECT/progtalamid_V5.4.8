@@ -36,7 +36,6 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
       badge: 'الأكثر طلباً',
       features: [
         'جميع ميزات Basic',
-        'نظام الروائز المتقدم',
         'إدارة الغياب والحضور',
         'نظام التوجيه',
         'إدارة الحركية',
@@ -48,16 +47,15 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
       id: 'expert',
       name: 'Expert',
       nameAr: 'خبير',
-      price: '500',
+      price: '600',
       duration: 'سنة',
       color: 'from-orange-500 to-red-600',
       badge: 'الأفضل قيمة',
       features: [
         'جميع ميزات Pro',
-        'أدوات المطور',
+        'نظام الروائز المتقدم',
         'دعم فني مباشر',
-        'تحديثات مدى الحياة',
-        'تخصيص حسب الطلب',
+        'تحديثات متجددة',
         'تدريب مجاني',
         'أولوية الدعم',
       ]
@@ -80,7 +78,7 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
             انتهت فترة التجربة المجانية
           </h1>
           <p className="text-xl text-gray-300 mb-6">
-            نأمل أنك استمتعت بتجربة البرنامج لمدة 7 أيام
+            نأمل أنك استمتعت بتجربة البرنامج لمدة 10 أيام
           </p>
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 max-w-2xl mx-auto">
             <h3 className="text-2xl font-bold text-white mb-3">
@@ -169,7 +167,7 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
                 </div>
                 <p className="text-gray-700 mb-2">تواصل معنا مباشرة عبر واتساب:</p>
                 <a
-                  href="https://wa.me/212XXXXXXXXX"
+                  href="https://wa.me/212662705774"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-green-600 font-bold text-lg hover:underline"
@@ -206,7 +204,7 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
         {/* معلومات إضافية */}
         <div className="mt-12 text-center">
           <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-6 max-w-2xl mx-auto">
-            <h4 className="text-lg font-bold text-white mb-3">لماذا تشترك في BGAstudents؟</h4>
+            <h4 className="text-lg font-bold text-white mb-3">لماذا تشترك في   progtalamid؟</h4>
             <div className="grid sm:grid-cols-3 gap-4 text-sm text-gray-200">
               <div>
                 <div className="text-2xl mb-2">🔒</div>
@@ -221,7 +219,7 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
               <div>
                 <div className="text-2xl mb-2">💎</div>
                 <div className="font-bold">تحديثات مستمرة</div>
-                <div>ميزات جديدة دائماً</div>
+                <div>تيسير التدبير الإداري </div>
               </div>
             </div>
           </div>
@@ -229,7 +227,7 @@ export const TrialExpired: React.FC<TrialExpiredProps> = ({ onEnterLicense }) =>
 
         {/* Footer */}
         <div className="mt-8 text-center text-gray-400 text-sm">
-          <p>نظام إدارة التلاميذ BGAstudents - مصمم خصيصاً للمؤسسات التعليمية المغربية</p>
+          <p>نظام إدارة التلاميذ progtalamid - مصمم خصيصاً للمؤسسات التعليميةالمغربيةالعمومية و الخصوصية ولجميع الأسلاك ابتدائي-إعدادي -تأهيلي </p>
         </div>
       </div>
     </div>

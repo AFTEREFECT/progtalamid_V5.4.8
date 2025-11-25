@@ -6,7 +6,7 @@ import { dbManager } from './utils/database';
 import { licenseManager } from './utils/licenseManager';
 import { trialManager } from './utils/trialManager';
 import { subscriptionManager } from './utils/subscriptionManager';
-import { accessControl } from './utils/accessControl'; // الإضافة الجديدة للنظام الآمن
+import { accessControl } from './utils/accessControl';
 import { LicenseActivation } from './components/LicenseActivation';
 import { TrialExpired } from './components/TrialExpired';
 import { TrialCountdown } from './components/TrialCountdown';
@@ -88,19 +88,30 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // التحقق الآمن من الصلاحية (Server-Side Verification) - النظام الجديد
+  // التحقق الآمن من الصلاحية (Server-Side Verification)
   useEffect(() => {
     const verifyAccess = async () => {
+      let timeoutId: NodeJS.Timeout;
+      
       try {
         setLicenseChecking(true);
         console.log('🛡️ بدء التحقق الآمن من الصلاحية...');
         
-        // استدعاء الحارس الموجود في السيرفر
-        const status = await accessControl.checkAccess();
+        // إضافة Timeout لمنع التعليق
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Timeout')), 10000);
+        });
+
+        // سباق بين التحقق والمهلة
+        const status = await Promise.race([
+          accessControl.checkAccess(),
+          timeoutPromise
+        ]);
+        
+        clearTimeout(timeoutId);
         console.log('📋 حالة الوصول من السيرفر:', status);
 
         if (status.access === 'granted') {
-          // ✅ وصول مصرح به
           setLicenseValid(true);
           
           if (status.type === 'paid') {
@@ -108,50 +119,54 @@ function App() {
             setIsTrialMode(false);
             setTrialDaysRemaining(0);
             setTrialHoursRemaining(0);
-            console.log(`✅ اشتراك مدفوع نشط: ${status.plan || 'غير محدد'}`);
             
-            // تنظيف أي بقايا محلية للتجربة
+            // حفظ الخطة المدفوعة
+            localStorage.setItem('current_plan', status.plan || 'Basic');
+            console.log(`✅ اشتراك مدفوع نشط: ${status.plan}`);
+            
             trialManager.clearLocalTrialData();
-            
-            // تسجيل نشاط المستخدم
             trialManager.logAction('paid', 'app_opened', {
               plan: status.plan
             }).catch(() => {});
 
           } else if (status.type === 'trial') {
-            // فترة تجريبية سارية
+            // فترة تجريبية Pro سارية
             setIsTrialMode(true);
             setTrialDaysRemaining(Math.ceil(status.days_remaining || 0));
             setTrialHoursRemaining(Math.ceil(status.hours_remaining || 0));
-            console.log(`🎁 فترة تجريبية نشطة: ${status.days_remaining} يوم متبقي`);
+            
+            // حفظ الخطة التجريبية (Pro)
+            localStorage.setItem('current_plan', status.plan || 'Pro');
+            console.log(`🎁 فترة تجريبية ${status.plan} نشطة: ${status.days_remaining} أيام متبقية`);
 
-            // تسجيل نشاط المستخدم
             trialManager.updateSessionActivity().catch(() => {});
             trialManager.logAction('trial', 'app_opened', {
-              days_remaining: status.days_remaining
+              days_remaining: status.days_remaining,
+              plan: status.plan
             }).catch(() => {});
           }
         } else {
-          // ❌ وصول مرفوض
+          // وصول مرفوض
           setLicenseValid(false);
-          console.warn(`⛔ وصول مرفوض: ${status.reason || 'غير محدد'}`);
+          localStorage.removeItem('current_plan');
+          console.warn(`⛔ وصول مرفوض: ${status.reason}`);
           
           if (status.reason === 'trial_expired') {
             setShowTrialExpired(true);
             setInitError('انتهت الفترة التجريبية المجانية');
           } else if (status.reason === 'no_license') {
-            // لم يتم التفعيل بعد
             setShowTrialExpired(false);
           } else {
-            // خطأ في الاتصال أو سبب آخر
             setShowTrialExpired(false);
           }
         }
       } catch (error) {
-        console.error('❌ خطأ غير متوقع في التحقق:', error);
+        console.error('❌ خطأ في التحقق:', error);
         setLicenseValid(false);
-        setShowTrialExpired(false);
+        localStorage.removeItem('current_plan');
+        setInitError('تعذر الاتصال بالخادم للتحقق من الترخيص.');
       } finally {
+        if (timeoutId!) clearTimeout(timeoutId);
         setLicenseChecking(false);
       }
     };
@@ -159,7 +174,7 @@ function App() {
     verifyAccess();
   }, []);
 
-  // تهيئة قاعدة البيانات المحلية بعد التحقق من الترخيص
+  // تهيئة قاعدة البيانات المحلية
   useEffect(() => {
     if (licenseValid === true) {
       const initializeApp = async () => {
@@ -182,10 +197,10 @@ function App() {
   const handleActivationSuccess = () => {
     setLicenseValid(true);
     setIsTrialMode(false);
-    window.location.reload(); // إعادة تحميل للحصول على أحدث حالة من السيرفر
+    window.location.reload();
   };
 
-  // شاشة التحقق من الترخيص (Loading)
+  // شاشة التحقق من الترخيص
   if (licenseChecking) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-900 to-purple-900">
@@ -212,7 +227,7 @@ function App() {
     }
   }
 
-  // عرض المحتوى حسب التبويب النشط
+  // عرض المحتوى
   const renderContent = () => {
     if (!isInitialized) {
       return (
@@ -336,7 +351,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50" dir="rtl">
-      {/* شريط التجربة - يظهر فقط إذا كان الوضع تجريبي */}
+      {/* شريط التجربة */}
       {isTrialMode && trialDaysRemaining > 0 && (
         <div className="fixed top-0 left-0 right-0 z-50">
           <TrialCountdown

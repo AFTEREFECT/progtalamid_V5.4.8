@@ -71,6 +71,8 @@ export class SubscriptionManager {
     if (error) throw error;
     return data || [];
   }
+  
+
 
   async getCurrentSubscription(): Promise<Subscription | null> {
     const institutionId = this.getInstitutionId();
@@ -298,9 +300,22 @@ export class SubscriptionManager {
     return false;
   }
 
-  getPlanName(): string {
-    return this.currentSubscription?.plan_name || 'None';
+ getPlanName(): string {
+  // أولاً: من الاشتراك المدفوع (الأولوية القصوى)
+  if (this.currentSubscription?.plan_name) {
+    return this.currentSubscription.plan_name;
   }
+  
+  // ثانياً: من التجربة المحفوظة في localStorage (يتم تحديثها بواسطة App.tsx)
+  const savedPlan = localStorage.getItem('current_plan');
+  if (savedPlan) {
+    return savedPlan; // سيرجع 'Pro' أثناء التجربة
+  }
+  
+  // ثالثاً: افتراضي (في حال عدم وجود أي شيء)
+  return 'Basic';
+}
+
 
   hasFeature(feature: string): boolean {
     if (!this.isSubscriptionActive()) return false;
