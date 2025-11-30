@@ -168,7 +168,7 @@ export const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivati
               ) : (
                 <>
                   <Sparkles className="w-6 h-6" />
-                  ابدأ التجربة المجانية - 7 أيام
+                  ابدأ 10 التجربة المجانية -  أيام
                 </>
               )}
             </button>
@@ -182,7 +182,7 @@ export const LicenseActivation: React.FC<LicenseActivationProps> = ({ onActivati
             <ul className="space-y-2 text-xs text-gray-600">
               <li className="flex items-start gap-2">
                 <Clock className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                <span className="font-medium text-green-700">التجربة المجانية: استخدم البرنامج بالكامل لمدة 7 أيام بدون قيود</span>
+                <span className="font-medium text-green-700">التجربة المجانية: استخدم البرنامج بالكامل لمدة 10 أيام بدون قيود</span>
               </li>
               
               <li className="flex items-start gap-2">

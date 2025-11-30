@@ -79,31 +79,40 @@ export const SubscriptionManagement: React.FC = () => {
     }
   };
 
-  const handleStartTrial = async (planName: string) => {
-    if (!institutionName.trim()) {
-      setMessage({ type: 'error', text: 'يرجى إدخال اسم المؤسسة' });
-      return;
+ const handleStartTrial = async () => {
+  if (!institutionName.trim()) {
+    setMessage({ type: 'error', text: 'يرجى إدخال اسم المؤسسة' });
+    return;
+  }
+
+  setLoading(true);
+  setMessage(null);
+
+  try {
+    // استدعاء الدالة الآمنة من السيرفر
+    const result = await trialManager.startServerTrial();
+
+    if (result.success) {
+      // حفظ اسم المؤسسة محلياً (اختياري)
+      localStorage.setItem('bga_institution_name', institutionName);
+      
+      setMessage({ type: 'success', text: result.message });
+      
+      // إعادة تحميل التطبيق لجلب الحالة الجديدة من السيرفر
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } else {
+      setMessage({ type: 'error', text: result.message });
     }
+  } catch (error) {
+    console.error('Error starting trial:', error);
+    setMessage({ type: 'error', text: 'حدث خطأ أثناء بدء الفترة التجريبية' });
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const result = await subscriptionManager.startTrial(institutionName, planName);
-
-      if (result.success) {
-        setMessage({ type: 'success', text: result.message });
-        await loadData();
-      } else {
-        setMessage({ type: 'error', text: result.message });
-      }
-    } catch (error) {
-      console.error('Error starting trial:', error);
-      setMessage({ type: 'error', text: 'حدث خطأ أثناء بدء الفترة التجريبية' });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusBadge = (status: string, isTrial: boolean) => {
     if (isTrial) {
